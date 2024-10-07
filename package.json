@@ -1,6 +1,6 @@
 {
-  "name": "supabase-safesession",
-  "version": "0.1.4",
+  "name": "@dalkommatt/supabase-safesession",
+  "version": "0.2.0",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "publishConfig": {
@@ -16,7 +16,7 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/zanzofily/supabase-safesession.git"
+    "url": "git+https://github.com/dalkommatt/supabase-safesession.git"
   },
   "keywords": [
     "Supabase",
@@ -27,9 +27,9 @@
   "author": "Zanzofily",
   "license": "MIT",
   "bugs": {
-    "url": "https://github.com/zanzofily/supabase-safesession/issues"
+    "url": "https://github.com/dalkommatt/supabase-safesession/issues"
   },
-  "homepage": "https://github.com/zanzofily/supabase-safesession#readme",
+  "homepage": "https://github.com/dalkommatt/supabase-safesession#readme",
   "dependencies": {
     "jsonwebtoken": "^9.0.2",
     "server-only": "^0.0.1"
