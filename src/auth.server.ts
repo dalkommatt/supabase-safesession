@@ -2,7 +2,7 @@ import { cookies } from "next/headers";
 import jwt from "jsonwebtoken";
 import { SupabaseClient } from "@supabase/supabase-js";
 import { AuthResponse, AuthTokens, SupabaseJwtPayload } from "./types";
-
+import "server-only";
 class AuthManager {
   private supabase: SupabaseClient;
   private jwtSecret: string;
@@ -21,26 +21,26 @@ class AuthManager {
    * Retrieves authentication tokens from cookies.
    * @returns {AuthTokens | null} AuthTokens if found and correctly parsed, null otherwise.
    */
-  private getAuthTokensFromCookies(): AuthTokens | null {
-    const cookieNameRegex = /^sb-[a-z]+-auth-token.*$/
-    const authCookies = cookies()
+  private async getAuthTokensFromCookies(): Promise<AuthTokens | null> {
+    const cookieNameRegex = /^sb-[a-z]+-auth-token.*$/;
+    const authCookies = (await cookies())
       .getAll()
       .filter((cookie) => cookieNameRegex.test(cookie.name))
-      .sort((a, b) => a.name.localeCompare(b.name))
+      .sort((a, b) => a.name.localeCompare(b.name));
     if (!authCookies) {
-      return null
+      return null;
     }
 
-    const authCookieValue = authCookies.map((cookie) => cookie.value).join("")
+    const authCookieValue = authCookies.map((cookie) => cookie.value).join("");
 
     try {
-      const session = JSON.parse(decodeURIComponent(authCookieValue))
+      const session = JSON.parse(decodeURIComponent(authCookieValue));
       return {
         access_token: session.access_token,
         refresh_token: session.refresh_token,
-      }
+      };
     } catch (error) {
-      return null
+      return null;
     }
   }
 
@@ -49,7 +49,7 @@ class AuthManager {
    * @returns {Promise<AuthResponse>} The user session data if successful, or an error message.
    */
   public async getSafeSession(): Promise<AuthResponse> {
-    const tokens = this.getAuthTokensFromCookies();
+    const tokens = await this.getAuthTokensFromCookies();
     if (!tokens) {
       return { status: "error", error: "Authentication tokens not found" };
     }
