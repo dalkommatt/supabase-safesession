@@ -27,19 +27,31 @@ class AuthManager {
       .getAll()
       .filter((cookie) => cookieNameRegex.test(cookie.name))
       .sort((a, b) => a.name.localeCompare(b.name));
-    if (!authCookies) {
+    console.log("Filtered auth cookies:", authCookies);
+
+    if (!authCookies.length) {
+      console.log("No authentication cookies found.");
       return null;
     }
 
     const authCookieValue = authCookies.map((cookie) => cookie.value).join("");
 
     try {
-      const session = JSON.parse(decodeURIComponent(authCookieValue));
+      const base64Value = decodeURIComponent(authCookieValue);
+      const base64Prefix = "base64-";
+      if (!base64Value.startsWith(base64Prefix)) {
+        console.error("Auth cookie value does not start with 'base64-'");
+        return null;
+      }
+      const base64Content = base64Value.slice(base64Prefix.length);
+      const jsonString = Buffer.from(base64Content, "base64").toString("utf-8");
+      const session = JSON.parse(jsonString);
       return {
         access_token: session.access_token,
         refresh_token: session.refresh_token,
       };
     } catch (error) {
+      console.error("Error parsing auth cookie value:", error);
       return null;
     }
   }
