@@ -1,8 +1,16 @@
+import { cache } from "react";
 import { cookies } from "next/headers";
-import jwt from "jsonwebtoken";
 import { SupabaseClient } from "@supabase/supabase-js";
-import { AuthResponse, AuthTokens, SupabaseJwtPayload } from "./types";
+import jwt from "jsonwebtoken";
+
+import {
+  AuthResponse,
+  AuthTokens,
+  SupabaseJwtPayload,
+} from "./auth-manager-types";
+
 import "server-only";
+
 class AuthManager {
   private supabase: SupabaseClient;
   private jwtSecret: string;
@@ -22,6 +30,7 @@ class AuthManager {
    * @returns {AuthTokens | null} AuthTokens if found and correctly parsed, null otherwise.
    */
   private async getAuthTokensFromCookies(): Promise<AuthTokens | null> {
+    console.log("Retrieving authentication tokens from cookies...");
     const cookieNameRegex = /^sb-[a-z]+-auth-token.*$/;
     const authCookies = (await cookies())
       .getAll()
@@ -57,6 +66,29 @@ class AuthManager {
   }
 
   /**
+   * Cached function to verify and parse the user session.
+   * The cache is keyed by the access token, ensuring uniqueness per user.
+   */
+  private parseAndVerifySessionCached = cache(
+    async (accessToken: string): Promise<AuthResponse> => {
+      try {
+        const session = jwt.verify(
+          accessToken,
+          this.jwtSecret
+        ) as SupabaseJwtPayload;
+        return { status: "success", data: { ...session, id: session.sub } };
+      } catch (error) {
+        if (error instanceof jwt.TokenExpiredError) {
+          const tokens = { access_token: accessToken, refresh_token: "" };
+          return this.refreshSession(tokens);
+        } else {
+          return { status: "error", error: "JWT verification failed" };
+        }
+      }
+    }
+  );
+
+  /**
    * Verifies the JWT token, refreshes it if expired, and returns user data.
    * @returns {Promise<AuthResponse>} The user session data if successful, or an error message.
    */
@@ -65,30 +97,8 @@ class AuthManager {
     if (!tokens) {
       return { status: "error", error: "Authentication tokens not found" };
     }
-    return this.parseAndVerifySession(tokens);
-  }
-
-  /**
-   * Verifies the JWT access token and decodes it. Handles token expiration by refreshing it.
-   * @param tokens The authentication tokens obtained from cookies.
-   * @returns {Promise<AuthResponse>} The decoded JWT payload or an error.
-   */
-  private async parseAndVerifySession(
-    tokens: AuthTokens
-  ): Promise<AuthResponse> {
-    try {
-      const session = jwt.verify(
-        tokens.access_token,
-        this.jwtSecret
-      ) as SupabaseJwtPayload;
-      return { status: "success", data: { ...session, id: session.sub } };
-    } catch (error) {
-      if (error instanceof jwt.TokenExpiredError) {
-        return this.refreshSession(tokens);
-      } else {
-        return { status: "error", error: "JWT verification failed" };
-      }
-    }
+    // Use the cached function with the user's access token
+    return this.parseAndVerifySessionCached(tokens.access_token);
   }
 
   /**
